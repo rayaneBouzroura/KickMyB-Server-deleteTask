@@ -8,6 +8,8 @@ import org.kickmyb.server.account.BadCredentialsException;
 import org.kickmyb.server.account.MUser;
 import org.kickmyb.server.account.MUserRepository;
 import org.kickmyb.server.account.ServiceAccount;
+import org.kickmyb.server.task.MTask;
+import org.kickmyb.server.task.MTaskRepository;
 import org.kickmyb.server.task.ServiceTask;
 import org.kickmyb.transfer.AddTaskRequest;
 import org.kickmyb.transfer.SignupRequest;
@@ -17,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 
@@ -40,14 +43,50 @@ class ServiceTaskTests {
 
     @Autowired
     private ServiceTask serviceTask;
+    @Autowired
+    private MTaskRepository taskRepository;
+
+
+
+
+    @Test
+    @Transactional
+    void testHardDeleteTask() throws ServiceTask.Empty, ServiceTask.TooShort, ServiceTask.Existing {
+        //create user
+        MUser u = createUser("M. Test");
+
+        //create task
+        AddTaskRequest atr = new AddTaskRequest();
+        atr.name = "Tâche de test";
+        atr.deadline = Date.from(new Date().toInstant().plusSeconds(3600));
+
+
+        //add task
+        serviceTask.addOne(atr, u);
+        MTask task = taskRepository.findAll().iterator().next();
+        //confirm it was added
+        Assertions.assertTrue(taskRepository.findById(task.id).isPresent());
+        //apply delete
+        try {
+            serviceTask.hardDelete(task.id, u);//try catch w error catching
+        } catch (ServiceTask.TaskNotFound e) {
+            fail("echec du test , tache introuvable.");
+        } catch (ServiceTask.UnauthorizedAccess e) {
+            fail("echec du test , acces non autoriser");
+        }
+
+        boolean taskExists = taskRepository.findById(task.id).isPresent();
+        Assertions.assertFalse(taskExists, "La tâche n'a pas été supprimée correctement.");
+    }
 
     @Test
     void testAddTask() throws ServiceTask.Empty, ServiceTask.TooShort, ServiceTask.Existing {
+        //create user
         MUser u = new MUser();
-        u.username = "M. Test";
+        u.username = "testerino";
         u.password = passwordEncoder.encode("Passw0rd!");
         userRepository.saveAndFlush(u);
-
+        //ajt req for task
         AddTaskRequest atr = new AddTaskRequest();
         atr.name = "Tâche de test";
         atr.deadline = Date.from(new Date().toInstant().plusSeconds(3600));
@@ -114,4 +153,18 @@ class ServiceTaskTests {
             assertEquals(ServiceTask.Existing.class, e.getClass());
         }
     }
+
+
+
+
+
+
+    private MUser createUser(String username) {
+        MUser user = new MUser();
+        user.username = username;
+        user.password = passwordEncoder.encode("Passw0rd!");
+        userRepository.save(user);
+        return user;
+    }
+
 }

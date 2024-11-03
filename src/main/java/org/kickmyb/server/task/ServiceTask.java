@@ -11,8 +11,12 @@ public interface ServiceTask {
     class Existing extends Exception {}
     class TooShort extends Exception {}
     class Empty extends Exception {}
+    class TaskNotFound extends Exception {}
+    class UnauthorizedAccess extends Exception {}
+
 
     // entity handling
+    void hardDelete(Long taskID, MUser user) throws TaskNotFound, UnauthorizedAccess;
     TaskDetailResponse detail(Long id, MUser user);
     void addOne(AddTaskRequest req, MUser user) throws Existing, Empty, TooShort;
     void updateProgress(long taskID, int value);
@@ -20,8 +24,16 @@ public interface ServiceTask {
     TaskDetailPhotoResponse detailPhoto(Long id, MUser user);
     List<HomeItemPhotoResponse> homePhoto(Long userID);
 
+
+
+
+
+
+
     // Potential web demo for JS injection
     String index();
 
     MUser userFromUsername(String username);
+
+
 }

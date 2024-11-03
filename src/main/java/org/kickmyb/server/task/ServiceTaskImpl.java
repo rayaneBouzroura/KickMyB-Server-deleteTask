@@ -3,6 +3,7 @@ package org.kickmyb.server.task;
 import org.joda.time.DateTime;
 import org.kickmyb.server.account.MUser;
 import org.kickmyb.server.account.MUserRepository;
+import org.kickmyb.server.photo.MPhotoRepository;
 import org.kickmyb.transfer.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -19,6 +20,7 @@ public class ServiceTaskImpl implements ServiceTask {
     @Autowired
     MUserRepository repoUser;
     @Autowired MTaskRepository repo;
+    @Autowired MPhotoRepository photoRepo;
     @Autowired MProgressEventRepository repoProgressEvent;
 
     private int percentage(Date start, Date current, Date end){
@@ -28,6 +30,29 @@ public class ServiceTaskImpl implements ServiceTask {
         double percentage =  100.0 * spent / total;
         // TODO si end est avant start c'est tout cassé.
         return Math.max((int) percentage, 0 );
+    }
+
+    @Override
+    @Transactional
+    public void hardDelete(Long taskID, MUser user) throws TaskNotFound, UnauthorizedAccess {
+
+        //recup task
+        MTask taskToDelete = repo.findById(taskID).orElseThrow(TaskNotFound::new);
+        //check if user has access to task
+        if (!user.tasks.contains(taskToDelete)) {
+            throw new UnauthorizedAccess();
+        }
+
+        //delete la tache from le user
+        user.tasks.remove(taskToDelete);
+        repoUser.save(user);
+        //delete img associatedw la tache si existe
+        if (taskToDelete.photo != null) {
+            photoRepo.delete(taskToDelete.photo);
+        }
+
+        repo.delete(taskToDelete);
+
     }
 
     @Override
