@@ -82,4 +82,28 @@ public class ControllerTask {
         UserDetails ud = (UserDetails) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return serviceTask.userFromUsername(ud.getUsername());
     }
+
+
+
+
+    //supression de tache
+    public @ResponseBody String deleteTask(@PathVariable long taskID){
+        System.out.println("KICKB SERVER : Deleting task with id: " + taskID);
+
+        //virtual wait time
+        ConfigHTTP.attenteArticifielle();
+        //retrieve user and apply la methode
+        MUser user = currentUser();
+        try {
+            serviceTask.hardDelete(taskID,user);
+            return  "tache supprimer";
+        } catch (ServiceTask.TaskNotFound e) {
+            return  "tache a supprimer non trouver";
+        } catch (ServiceTask.UnauthorizedAccess e) {
+            return  "acces non autoriser";
+        }catch (Exception e) {
+            return  "erreur inconnu";
+        }
+
+    }
 }
